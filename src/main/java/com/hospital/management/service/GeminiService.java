@@ -23,7 +23,7 @@ public class GeminiService {
 
     public GeminiService(
             @Value("${gemini.api.key:}") String apiKey,
-            @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent}") String apiUrl,
+            @Value("${gemini.api.url:https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent}") String apiUrl,
             ObjectMapper objectMapper) {
         this.apiKey = apiKey;
         this.apiUrl = apiUrl;
