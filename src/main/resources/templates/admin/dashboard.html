@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel - CareFlow</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .tabs-nav {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .tab-btn.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .admin-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            max-width: 500px;
+            width: 90%;
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="nav-container">
+            <a href="/" class="logo">Care<span>Flow</span></a>
+            <div class="nav-user">
+                <span class="user-tag">Role: <strong>Administrator</strong></span>
+                <a href="/api/auth/logout" class="btn-logout" id="logoutBtn">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <h1 class="dashboard-title">System Administration</h1>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab(event, 'tab-overview')"><i class="fa-solid fa-chart-pie" style="margin-right: 0.5rem;"></i>Overview & Stats</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-doctors')"><i class="fa-solid fa-user-md" style="margin-right: 0.5rem;"></i>Manage Doctors</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-patients')"><i class="fa-solid fa-hospital-user" style="margin-right: 0.5rem;"></i>Manage Patients</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-ai-audit')"><i class="fa-solid fa-list-check" style="margin-right: 0.5rem;"></i>AI Suggestion Logs</button>
+        </div>
+
+        <!-- ==================== TAB 1: OVERVIEW ==================== -->
+        <div id="tab-overview" class="tab-content active">
+            <!-- Analytics Cards -->
+            <div class="analytics-grid">
+                <div class="analytic-card">
+                    <div class="analytic-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                    <div class="analytic-data">
+                        <h3>Total Bookings</h3>
+                        <p th:text="${analytics.totalAppointments}">0</p>
+                    </div>
+                </div>
+                <div class="analytic-card">
+                    <div class="analytic-icon" style="background: rgba(239, 68, 68, 0.15); color: var(--danger);"><i class="fa-solid fa-ban"></i></div>
+                    <div class="analytic-data">
+                        <h3>Cancellation Rate</h3>
+                        <p th:text="${analytics.cancellationRate} + '%'">0%</p>
+                    </div>
+                </div>
+                <div class="analytic-card">
+                    <div class="analytic-icon" style="background: rgba(16, 185, 129, 0.15); color: var(--success);"><i class="fa-solid fa-fire"></i></div>
+                    <div class="analytic-data">
+                        <h3>Busiest Specialty</h3>
+                        <p th:text="${analytics.busiestSpecialty}">Cardiologist</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Appointments list -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Hospital Consultation Logs</h2>
+                </div>
+                <div class="table-responsive" th:if="${not #lists.isEmpty(appointments)}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Appointment ID</th>
+                                <th>Patient</th>
+                                <th>Assigned Doctor</th>
+                                <th>Date & Slot</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="appt : ${appointments}">
+                                <td style="font-weight: 600;" th:text="'#' + ${appt.id}">#1024</td>
+                                <td th:text="${appt.patientName}">John Doe</td>
+                                <td th:text="${appt.doctorName}">Dr. Ramesh</td>
+                                <td>
+                                    <span th:text="${#temporals.format(appt.appointmentDate, 'dd MMM yyyy')}">26 Jun 2026</span>
+                                    <span style="font-size: 0.85rem; color: var(--text-muted);" th:text="'(' + ${appt.timeSlot} + ')'">(09:00-09:30)</span>
+                                </td>
+                                <td>
+                                    <span th:class="'badge badge-' + ${#strings.toLowerCase(appt.status)}" th:text="${appt.status}">PENDING</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div th:if="${#lists.isEmpty(appointments)}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    No consultations booked on the platform yet.
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 2: MANAGE DOCTORS ==================== -->
+        <div id="tab-doctors" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Doctors Registry</h2>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Doctor ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Specialty</th>
+                                <th>Experience</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="doc : ${doctors}">
+                                <td th:text="'DOC-' + ${doc.id}">DOC-1</td>
+                                <td style="font-weight: 600; color: #fff;" th:text="${doc.user.name}">Dr. Ajay Patel</td>
+                                <td th:text="${doc.user.email}">ajay@hospital.com</td>
+                                <td th:text="${doc.specialty}">Cardiology</td>
+                                <td th:text="${doc.experienceYears} + ' Years'">5 Years</td>
+                                <td>
+                                    <span th:class="${doc.isActive} ? 'badge badge-low' : 'badge badge-high'" th:text="${doc.isActive} ? 'ACTIVE' : 'INACTIVE'">ACTIVE</span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button th:if="${doc.isActive}" type="button" class="btn-primary edit-doctor-btn"
+                                                th:data-id="${doc.id}" th:data-name="${doc.user.name}"
+                                                th:data-spec="${doc.specialty}" th:data-qual="${doc.qualification}" th:data-exp="${doc.experienceYears}"
+                                                style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem; background: rgba(99, 102, 241, 0.2); border: 1px solid var(--primary);">
+                                            Edit
+                                        </button>
+                                        <button th:if="${doc.isActive}" type="button" class="btn-primary" th:onclick="'deleteDoctor(' + ${doc.id} + ')'"
+                                                style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem; background: var(--danger-light); color: var(--danger); border: none;">
+                                            Deactivate
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 3: MANAGE PATIENTS ==================== -->
+        <div id="tab-patients" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Patients Directory</h2>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Age/Gender</th>
+                                <th>Blood Group</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="pat : ${patients}">
+                                <td th:text="'PAT-' + ${pat.id}">PAT-1</td>
+                                <td style="font-weight: 600; color: #fff;" th:text="${pat.user.name}">John Doe</td>
+                                <td th:text="${pat.user.email}">john@gmail.com</td>
+                                <td th:text="${pat.age} + ' Yrs / ' + ${pat.gender}">25 Yrs / Male</td>
+                                <td th:text="${pat.bloodGroup}">O+</td>
+                                <td th:text="${pat.phone}">+91 9988776655</td>
+                                <td>
+                                    <span th:class="${pat.isActive} ? 'badge badge-low' : 'badge badge-high'" th:text="${pat.isActive} ? 'ACTIVE' : 'INACTIVE'">ACTIVE</span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <button th:if="${pat.isActive}" type="button" class="btn-primary edit-patient-btn"
+                                                th:data-id="${pat.id}" th:data-name="${pat.user.name}"
+                                                th:data-age="${pat.age}" th:data-gender="${pat.gender}" th:data-bg="${pat.bloodGroup}" th:data-phone="${pat.phone}"
+                                                style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem; background: rgba(99, 102, 241, 0.2); border: 1px solid var(--primary);">
+                                            Edit
+                                        </button>
+                                        <button th:if="${pat.isActive}" type="button" class="btn-primary" th:onclick="'deletePatient(' + ${pat.id} + ')'"
+                                                style="width: auto; padding: 0.3rem 0.6rem; font-size: 0.8rem; background: var(--danger-light); color: var(--danger); border: none;">
+                                            Deactivate
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 4: AI AUDIT LOG ==================== -->
+        <div id="tab-ai-audit" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">AI Suggestion Audit History</h2>
+                </div>
+                <div class="table-responsive" th:if="${not #lists.isEmpty(aiSuggestions)}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Patient Name</th>
+                                <th>Symptoms Text</th>
+                                <th>AI Suggested Specialty</th>
+                                <th>Urgency Level</th>
+                                <th>Gemini Reasoning</th>
+                                <th>Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="sugg : ${aiSuggestions}">
+                                <td style="font-weight: 600; color: #fff;" th:text="${sugg.patientName}">John Doe</td>
+                                <td style="max-width: 250px; font-size: 0.9rem;" th:text="${sugg.symptomsText}">Chest pain</td>
+                                <td style="color: var(--primary); font-weight: 600;" th:text="${sugg.suggestedSpecialty}">Cardiologist</td>
+                                <td>
+                                    <span th:class="'badge badge-' + ${#strings.toLowerCase(sugg.urgencyLevel)}" th:text="${sugg.urgencyLevel}">HIGH</span>
+                                </td>
+                                <td style="max-width: 350px; font-size: 0.9rem; color: var(--text-muted);" th:text="${sugg.reasoning}">Chest pain is dangerous.</td>
+                                <td style="font-size: 0.85rem;" th:text="${#temporals.format(sugg.createdAt, 'dd MMM yyyy HH:mm')}">26 Jun 2026 15:30</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div th:if="${#lists.isEmpty(aiSuggestions)}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    No AI suggestions have been generated by patients yet.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Doctor Edit Modal -->
+    <div id="doctorModal" class="admin-modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="color: #fff;" id="doctorModalTitle">Edit Doctor Details</h3>
+                <button type="button" onclick="closeDocModal()" style="background:transparent; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <form id="doctorForm">
+                <input type="hidden" id="editDocId">
+                <div class="form-group">
+                    <label>Doctor Name</label>
+                    <input type="text" id="editDocName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Specialty</label>
+                    <select id="editDocSpec" required>
+                        <option value="General Physician">General Physician</option>
+                        <option value="Cardiologist">Cardiologist</option>
+                        <option value="Dermatologist">Dermatologist</option>
+                        <option value="Neurologist">Neurologist</option>
+                        <option value="Orthopedic">Orthopedic</option>
+                        <option value="Pediatrician">Pediatrician</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Qualification</label>
+                    <input type="text" id="editDocQual" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Experience Years</label>
+                    <input type="number" id="editDocExp" class="form-control" required min="0">
+                </div>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Patient Edit Modal -->
+    <div id="patientModal" class="admin-modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="color: #fff;" id="patientModalTitle">Edit Patient Details</h3>
+                <button type="button" onclick="closePatModal()" style="background:transparent; border:none; color:#fff; font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <form id="patientForm">
+                <input type="hidden" id="editPatId">
+                <div class="form-group">
+                    <label>Patient Name</label>
+                    <input type="text" id="editPatName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Age</label>
+                    <input type="number" id="editPatAge" class="form-control" required min="0">
+                </div>
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="editPatGender" required>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Blood Group</label>
+                    <input type="text" id="editPatBg" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="text" id="editPatPhone" class="form-control" required>
+                </div>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Logout integration
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login';
+        });
+
+        // Tab Switching Logic
+        function switchTab(evt, tabId) {
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        // --- DOCTOR API CALLS ---
+        const docModal = document.getElementById('doctorModal');
+        document.querySelectorAll('.edit-doctor-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('editDocId').value = btn.getAttribute('data-id');
+                document.getElementById('editDocName').value = btn.getAttribute('data-name');
+                document.getElementById('editDocSpec').value = btn.getAttribute('data-spec');
+                document.getElementById('editDocQual').value = btn.getAttribute('data-qual');
+                document.getElementById('editDocExp').value = btn.getAttribute('data-exp');
+                docModal.style.display = 'flex';
+            });
+        });
+        function closeDocModal() { docModal.style.display = 'none'; }
+        document.getElementById('doctorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editDocId').value;
+            const payload = {
+                specialty: document.getElementById('editDocSpec').value,
+                qualification: document.getElementById('editDocQual').value,
+                experienceYears: parseInt(document.getElementById('editDocExp').value),
+                user: { name: document.getElementById('editDocName').value }
+            };
+            const response = await fetch(`/api/admin/doctors/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                alert('Doctor details updated successfully!');
+                window.location.reload();
+            } else { alert('Failed to update details.'); }
+        });
+        async function deleteDoctor(id) {
+            if (confirm('Deactivating this doctor profile will also deactivate their login account. Proceed?')) {
+                const response = await fetch(`/api/admin/doctors/${id}`, { method: 'DELETE' });
+                if (response.ok) { window.location.reload(); }
+                else { alert('Failed to deactivate doctor.'); }
+            }
+        }
+
+        // --- PATIENT API CALLS ---
+        const patModal = document.getElementById('patientModal');
+        document.querySelectorAll('.edit-patient-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('editPatId').value = btn.getAttribute('data-id');
+                document.getElementById('editPatName').value = btn.getAttribute('data-name');
+                document.getElementById('editPatAge').value = btn.getAttribute('data-age');
+                document.getElementById('editPatGender').value = btn.getAttribute('data-gender');
+                document.getElementById('editPatBg').value = btn.getAttribute('data-bg');
+                document.getElementById('editPatPhone').value = btn.getAttribute('data-phone');
+                patModal.style.display = 'flex';
+            });
+        });
+        function closePatModal() { patModal.style.display = 'none'; }
+        document.getElementById('patientForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editPatId').value;
+            const payload = {
+                age: parseInt(document.getElementById('editPatAge').value),
+                gender: document.getElementById('editPatGender').value,
+                bloodGroup: document.getElementById('editPatBg').value,
+                phone: document.getElementById('editPatPhone').value,
+                user: { name: document.getElementById('editPatName').value }
+            };
+            const response = await fetch(`/api/admin/patients/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (response.ok) {
+                alert('Patient details updated successfully!');
+                window.location.reload();
+            } else { alert('Failed to update details.'); }
+        });
+        async function deletePatient(id) {
+            if (confirm('Deactivating this patient profile will also deactivate their login account. Proceed?')) {
+                const response = await fetch(`/api/admin/patients/${id}`, { method: 'DELETE' });
+                if (response.ok) { window.location.reload(); }
+                else { alert('Failed to deactivate patient.'); }
+            }
+        }
+    </script>
+</body>
+</html>

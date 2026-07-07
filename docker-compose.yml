@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # Database Service (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: hms-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: hospital_db
+      MYSQL_USER: hms_user
+      MYSQL_PASSWORD: hms_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - hms-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Spring Boot Web Application
+  app:
+    build: .
+    container_name: hms-app
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/hospital_db?allowPublicKeyRetrieval=true&useSSL=false
+      - SPRING_DATASOURCE_USERNAME=hms_user
+      - SPRING_DATASOURCE_PASSWORD=hms_password
+      - JWT_SECRET=4f8b9e6a0d2c4e5b7a8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+
+volumes:
+  hms-db-data:

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Patient Dashboard - CareFlow</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+        @media (min-width: 1024px) {
+            .dashboard-container {
+                grid-template-columns: 1.2fr 0.8fr;
+            }
+        }
+        .ai-result-box {
+            display: none;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(14, 165, 233, 0.1) 100%);
+            border: 1px solid var(--primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            animation: fadeIn 0.4s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .summary-box {
+            background: rgba(99, 102, 241, 0.08);
+            border-left: 3px solid var(--primary);
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="nav-container">
+            <a href="/" class="logo">Care<span>Flow</span></a>
+            <div class="nav-user">
+                <span class="user-tag">Patient Profile: <strong th:text="${patient.user.name}">John Doe</strong></span>
+                <a href="/api/auth/logout" class="btn-logout" id="logoutBtn">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <h1 class="dashboard-title">Welcome back, <span th:text="${patient.user.name}">John</span></h1>
+
+        <div class="dashboard-container">
+            <!-- Left Side: Appointments history & AI Suggestion -->
+            <div>
+                <!-- AI Doctor Specialty suggestion Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fa-solid fa-robot" style="color: var(--primary); margin-right: 0.5rem;"></i>AI Doctor Suggestion</h2>
+                        <span class="badge badge-low">Gemini Active</span>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
+                        Enter your symptoms to let Gemini suggest a doctor specialty and determine the clinical urgency.
+                    </p>
+                    <form id="aiSuggestionForm">
+                        <div class="form-group">
+                            <label for="symptomsText">Describe your symptoms in detail</label>
+                            <textarea id="symptomsText" rows="3" placeholder="e.g., I have sharp chest pain that radiates to my left arm, along with mild breathlessness." required></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary" id="aiBtn">
+                            <span id="aiBtnText">Analyze Symptoms</span>
+                            <i class="fa-solid fa-chevron-right" style="margin-left: 0.5rem;"></i>
+                        </button>
+                    </form>
+
+                    <!-- AI Result box (Dynamic) -->
+                    <div id="aiResult" class="ai-result-box">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                            <h3 style="color: #fff; font-size: 1.1rem; font-weight: 600;">AI Analysis Result</h3>
+                            <span id="urgencyBadge" class="badge">Urgency</span>
+                        </div>
+                        <div style="margin-bottom: 0.75rem;">
+                            <strong>Suggested Specialty: </strong> 
+                            <span id="suggestedSpecialty" style="color: #fff; font-weight: 600;">General Physician</span>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Reasoning: </strong> 
+                            <p id="aiReasoning" style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; line-height: 1.5;"></p>
+                        </div>
+                        <button type="button" class="btn-primary" id="applySpecialtyFilter" style="background: rgba(99, 102, 241, 0.2); border: 1px solid var(--primary); color: #fff;">
+                            Apply Suggestion & Filter Doctors
+                        </button>
+                    </div>
+                </div>
+
+                <!-- My Appointments History Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fa-solid fa-calendar-check" style="color: var(--primary); margin-right: 0.5rem;"></i>Your Appointments</h2>
+                    </div>
+                    <div class="table-responsive" th:if="${not #lists.isEmpty(appointments)}">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Doctor / Specialty</th>
+                                    <th>Date & Slot</th>
+                                    <th>Status</th>
+                                    <th>Consult Notes & AI Summary</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="appt : ${appointments}">
+                                    <td>
+                                        <div style="font-weight: 600; color: #fff;" th:text="${appt.doctorName}">Dr. Ajay Patel</div>
+                                        <div style="font-size: 0.85rem; color: var(--text-muted);" th:text="${appt.specialty}">Cardiologist</div>
+                                    </td>
+                                    <td>
+                                        <div th:text="${#temporals.format(appt.appointmentDate, 'dd MMM yyyy')}">26 Jun 2026</div>
+                                        <div style="font-size: 0.85rem; color: var(--text-muted);" th:text="${appt.timeSlot}">09:00-09:30</div>
+                                    </td>
+                                    <td>
+                                        <span th:class="'badge badge-' + ${#strings.toLowerCase(appt.status)}" th:text="${appt.status}">PENDING</span>
+                                    </td>
+                                    <td>
+                                        <!-- Notes -->
+                                        <div th:if="${appt.notes}" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+                                            <strong>Doctor Notes:</strong> <span th:text="${appt.notes}">Patient needs rest.</span>
+                                        </div>
+                                        <div th:if="${appt.notes == null}" style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">
+                                            No consultation notes filed yet.
+                                        </div>
+                                        <!-- AI Summary -->
+                                        <div th:if="${appt.aiSummary}" class="summary-box">
+                                            <div style="font-weight: 600; color: #fff; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                                                <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--primary);"></i> AI English Summary:
+                                            </div>
+                                            <span th:text="${appt.aiSummary}">Take meds on time.</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div th:if="${#lists.isEmpty(appointments)}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        <i class="fa-regular fa-calendar-xmark" style="font-size: 2.5rem; margin-bottom: 1rem; color: var(--border-color);"></i>
+                        <p>No appointments scheduled yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Doctors filtering & Booking Form -->
+            <div>
+                <!-- Doctor Filters & Search -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fa-solid fa-user-doctor" style="color: var(--primary); margin-right: 0.5rem;"></i>Find a Doctor</h2>
+                    </div>
+                    <form method="GET" th:action="@{/patient/dashboard}">
+                        <div class="form-group">
+                            <label for="filterSpecialty">Filter by Specialty</label>
+                            <select name="specialty" id="filterSpecialty" onchange="this.form.submit()">
+                                <option value="">-- All Specialties --</option>
+                                <option th:each="spec : ${specialties}" th:value="${spec}" th:text="${spec}" th:selected="${spec == selectedSpecialty}">Cardiology</option>
+                            </select>
+                        </div>
+                    </form>
+
+                    <!-- Doctors List -->
+                    <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; max-height: 350px; overflow-y: auto; padding-right: 0.25rem;">
+                        <div th:each="doc : ${doctors}" style="background: rgba(31, 41, 55, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; color: #fff;" th:text="${doc.user.name}">Dr. Ramesh</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                                    <span th:text="${doc.specialty}">General Medicine</span> &bull; <span th:text="${doc.experienceYears} + ' Yrs Exp'">5 Yrs Exp</span>
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--primary); margin-top: 0.25rem;" th:text="${doc.qualification}">MBBS</div>
+                            </div>
+                            <button type="button" class="btn-primary select-doctor-btn" 
+                                    th:data-id="${doc.id}" th:data-name="'Dr. ' + ${doc.user.name}"
+                                    style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                                Select
+                            </button>
+                        </div>
+                        <div th:if="${#lists.isEmpty(doctors)}" style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 1rem;">
+                            No active doctors available in this specialty.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking Panel -->
+                <div class="card" id="bookingCard" style="display: none;">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fa-solid fa-clock" style="color: var(--primary); margin-right: 0.5rem;"></i>Book Slot</h2>
+                    </div>
+                    <form id="bookingForm">
+                        <div class="form-group">
+                            <label>Selected Doctor</label>
+                            <input type="text" id="selectedDoctorName" class="form-control" style="background: rgba(31, 41, 55, 0.6);" readonly>
+                            <input type="hidden" id="selectedDoctorId">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="appointmentDate">Appointment Date</label>
+                            <input type="date" id="appointmentDate" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="timeSlot">Available Time Slots</label>
+                            <select id="timeSlot" required>
+                                <option value="">-- Choose Time Slot --</option>
+                                <option value="09:00-09:30">09:00 AM - 09:30 AM</option>
+                                <option value="09:30-10:00">09:30 AM - 10:00 AM</option>
+                                <option value="10:00-10:30">10:00 AM - 10:30 AM</option>
+                                <option value="10:30-11:00">10:30 AM - 11:00 AM</option>
+                                <option value="11:00-11:30">11:00 AM - 11:30 AM</option>
+                                <option value="11:30-12:00">11:30 AM - 12:00 PM</option>
+                                <option value="14:00-14:30">02:00 PM - 02:30 PM</option>
+                                <option value="14:30-15:00">02:30 PM - 03:00 PM</option>
+                                <option value="15:00-15:30">03:00 PM - 03:30 PM</option>
+                                <option value="15:30-16:00">03:30 PM - 04:00 PM</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-primary">Confirm Appointment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Set minimum date for booking input to today
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('appointmentDate').min = todayStr;
+
+        // Logout redirection integration
+        document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = '/login';
+        });
+
+        // Doctor selection helper
+        document.querySelectorAll('.select-doctor-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const docId = btn.getAttribute('data-id');
+                const docName = btn.getAttribute('data-name');
+                
+                document.getElementById('selectedDoctorId').value = docId;
+                document.getElementById('selectedDoctorName').value = docName;
+                document.getElementById('bookingCard').style.display = 'block';
+                
+                // Scroll down to booking panel for mobile layouts
+                document.getElementById('bookingCard').scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // Book Appointment AJAX
+        document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const doctorId = parseInt(document.getElementById('selectedDoctorId').value);
+            const appointmentDate = document.getElementById('appointmentDate').value;
+            const timeSlot = document.getElementById('timeSlot').value;
+
+            try {
+                const response = await fetch('/api/patient/appointments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ doctorId, appointmentDate, timeSlot })
+                });
+
+                if (response.status === 201) {
+                    alert('Appointment scheduled successfully!');
+                    window.location.reload();
+                } else {
+                    const data = await response.json();
+                    alert(data.message || data.error || 'Failed to book slot. Check overlaps.');
+                }
+            } catch (err) {
+                alert('Connection to server failed.');
+            }
+        });
+
+        // AI Symptoms Analysis AJAX (Placeholder for Phase 7 implementation)
+        document.getElementById('aiSuggestionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const symptomsText = document.getElementById('symptomsText').value;
+            const aiBtn = document.getElementById('aiBtn');
+            const aiBtnText = document.getElementById('aiBtnText');
+            
+            // Set loading state
+            aiBtn.disabled = true;
+            aiBtnText.textContent = 'AI Diagnosing...';
+
+            try {
+                const response = await fetch('/api/ai/suggest-doctor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symptomsText })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Populate UI
+                    document.getElementById('suggestedSpecialty').textContent = data.suggestedSpecialty;
+                    document.getElementById('aiReasoning').textContent = data.reasoning;
+                    
+                    // Render Badge
+                    const badge = document.getElementById('urgencyBadge');
+                    badge.className = 'badge';
+                    const level = data.urgencyLevel.toUpperCase();
+                    badge.textContent = level + ' Urgency';
+                    if (level === 'HIGH') {
+                        badge.classList.add('badge-high');
+                    } else if (level === 'MEDIUM') {
+                        badge.classList.add('badge-medium');
+                    } else {
+                        badge.classList.add('badge-low');
+                    }
+
+                    // Show Box
+                    document.getElementById('aiResult').style.display = 'block';
+
+                    // Set up click listener for filtering doctors by the AI suggestion
+                    document.getElementById('applySpecialtyFilter').onclick = () => {
+                        window.location.href = `/patient/dashboard?specialty=${encodeURIComponent(data.suggestedSpecialty)}`;
+                    };
+                } else {
+                    alert('AI suggestions are currently unavailable. Direct physician bookings remain open.');
+                }
+            } catch (err) {
+                alert('Failed to connect to AI server.');
+            } finally {
+                aiBtn.disabled = false;
+                aiBtnText.textContent = 'Analyze Symptoms';
+            }
+        });
+    </script>
+</body>
+</html>

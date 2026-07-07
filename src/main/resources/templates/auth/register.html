@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Hospital Management - Register</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <style>
+        .error-message {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .success-message {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1.25rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            margin: 1.5rem 0 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="auth-wrapper" style="min-height: 100vh; padding: 3rem 0;">
+
+    <div class="card auth-card" style="max-width: 550px;">
+        <div class="auth-header">
+            <h1>Create Account</h1>
+            <p style="color: var(--text-muted); margin-top: 0.25rem;">Register to access our medical portal</p>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+
+        <form id="registerForm">
+            <!-- Common Fields -->
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" class="form-control" placeholder="John Doe" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" class="form-control" placeholder="john.doe@example.com" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" class="form-control" placeholder="Min 6 characters" required autocomplete="new-password">
+            </div>
+
+            <div class="form-group">
+                <label for="role">Portal Role</label>
+                <select id="role" required>
+                    <option value="PATIENT">Patient Account</option>
+                    <option value="DOCTOR">Doctor Profile</option>
+                </select>
+            </div>
+
+            <!-- Patient Specific Fields (Shown by default) -->
+            <div id="patientFields">
+                <div class="section-title">Patient Profile Information</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="age">Age</label>
+                        <input type="number" id="age" class="form-control" placeholder="30" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">Gender</label>
+                        <select id="gender">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label for="bloodGroup">Blood Group</label>
+                        <select id="bloodGroup">
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="N/A">Not Known</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="text" id="phone" class="form-control" placeholder="+91 9988776655">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Doctor Specific Fields (Hidden by default) -->
+            <div id="doctorFields" style="display: none;">
+                <div class="section-title">Clinical Profile Details</div>
+                <div class="form-group">
+                    <label for="specialty">Medical Specialty</label>
+                    <select id="specialty">
+                        <option value="General Physician">General Physician</option>
+                        <option value="Cardiologist">Cardiologist</option>
+                        <option value="Dermatologist">Dermatologist</option>
+                        <option value="Neurologist">Neurologist</option>
+                        <option value="Orthopedic">Orthopedic</option>
+                        <option value="Pediatrician">Pediatrician</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="qualification">Qualifications (e.g., MBBS, MD)</label>
+                    <input type="text" id="qualification" class="form-control" placeholder="MBBS, MD (General Medicine)">
+                </div>
+                <div class="form-group">
+                    <label for="experienceYears">Years of Experience</label>
+                    <input type="number" id="experienceYears" class="form-control" placeholder="8" min="0">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Register</button>
+        </form>
+
+        <div class="auth-footer-text">
+            Already have an account? <a th:href="@{/login}">Login here</a>
+        </div>
+    </div>
+
+    <script>
+        const roleSelect = document.getElementById('role');
+        const patientFields = document.getElementById('patientFields');
+        const doctorFields = document.getElementById('doctorFields');
+
+        roleSelect.addEventListener('change', () => {
+            if (roleSelect.value === 'PATIENT') {
+                patientFields.style.display = 'block';
+                doctorFields.style.display = 'none';
+            } else {
+                patientFields.style.display = 'none';
+                doctorFields.style.display = 'block';
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorDiv = document.getElementById('errorMessage');
+            const successDiv = document.getElementById('successMessage');
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            const payload = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                role: roleSelect.value
+            };
+
+            if (payload.role === 'PATIENT') {
+                payload.age = parseInt(document.getElementById('age').value) || null;
+                payload.gender = document.getElementById('gender').value;
+                payload.bloodGroup = document.getElementById('bloodGroup').value;
+                payload.phone = document.getElementById('phone').value;
+            } else {
+                payload.specialty = document.getElementById('specialty').value;
+                payload.qualification = document.getElementById('qualification').value;
+                payload.experienceYears = parseInt(document.getElementById('experienceYears').value) || null;
+            }
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    successDiv.textContent = 'Account registered successfully! Redirecting to login...';
+                    successDiv.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    const data = await response.json();
+                    errorDiv.textContent = data.message || data.error || 'Registration failed. Check inputs.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server connection failed';
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
